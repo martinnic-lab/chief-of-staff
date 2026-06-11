@@ -25,6 +25,12 @@ export default function RootLayout({
               <Link href="/config" className="opacity-90 hover:opacity-100">
                 Configuración
               </Link>
+              <a
+                href="/salir"
+                className="rounded-md bg-white/15 px-3 py-1 opacity-90 hover:opacity-100"
+              >
+                Salir
+              </a>
             </nav>
           </div>
         </header>

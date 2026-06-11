@@ -1,37 +1,29 @@
 // === Portero del tablero (Next 16: "proxy", antes "middleware") ===
 //
-// Protege TODAS las pantallas con usuario y contraseña (Basic Auth del
-// navegador). Quedan libres solo las rutas que necesitan entrar solas:
+// Protege las pantallas con una sesión por cookie: quien no la tenga va a
+// la pantalla /login. Quedan libres solo las rutas que entran solas:
+//   - /login         (la propia puerta)
 //   - /api/telegram  (la valida su propio secreto de Telegram)
 //   - /api/cron/*    (las valida CRON_SECRET)
 //
 // Si DASHBOARD_PASSWORD no está configurada (desarrollo local), no bloquea.
 
 import { NextRequest, NextResponse } from "next/server";
+import { COOKIE_SESION, tokenSesion } from "@/lib/sesion";
 
-export function proxy(req: NextRequest) {
-  const pass = process.env.DASHBOARD_PASSWORD;
-  if (!pass) return NextResponse.next();
+export async function proxy(req: NextRequest) {
+  if (!process.env.DASHBOARD_PASSWORD) return NextResponse.next();
 
-  const user = process.env.DASHBOARD_USER ?? "martin";
-  const auth = req.headers.get("authorization");
-  if (auth?.startsWith("Basic ")) {
-    try {
-      const [u, p] = atob(auth.slice(6)).split(":");
-      if (u === user && p === pass) return NextResponse.next();
-    } catch {
-      // header malformado → cae al 401
-    }
+  const cookie = req.cookies.get(COOKIE_SESION)?.value;
+  if (cookie && cookie === (await tokenSesion())) {
+    return NextResponse.next();
   }
 
-  return new NextResponse("Acceso restringido — Chief of Staff", {
-    status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="Chief of Staff Nivel"' },
-  });
+  return NextResponse.redirect(new URL("/login", req.url));
 }
 
 export const config = {
   matcher: [
-    "/((?!api/telegram|api/cron|_next/static|_next/image|favicon.ico).*)",
+    "/((?!login|api/telegram|api/cron|_next/static|_next/image|favicon.ico).*)",
   ],
 };

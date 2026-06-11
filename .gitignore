@@ -33,6 +33,10 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# Archivo con claves en texto plano (NO commitear) y config local del agente
+Chief Of Staff Info Telegram.txt
+.claude/
+
 # vercel
 .vercel
 

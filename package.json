@@ -11,6 +11,7 @@
     "db:seed": "node --env-file=.env.local --import tsx src/db/seed.ts",
     "db:migrar": "node --env-file=.env.local --import tsx src/db/migrar-capa.ts",
     "sync": "node --env-file=.env.local --import tsx src/sync/servicio.ts",
+    "bot": "node --env-file=.env.local --import tsx src/bot/servicio.ts",
     "aprobar": "node --env-file=.env.local --import tsx src/sync/aprobar.ts"
   },
   "dependencies": {

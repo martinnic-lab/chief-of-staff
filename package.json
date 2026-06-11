@@ -8,9 +8,13 @@
     "start": "next start",
     "lint": "eslint",
     "db:push": "drizzle-kit push",
-    "db:seed": "node --env-file=.env.local --import tsx src/db/seed.ts"
+    "db:seed": "node --env-file=.env.local --import tsx src/db/seed.ts",
+    "db:migrar": "node --env-file=.env.local --import tsx src/db/migrar-capa.ts",
+    "sync": "node --env-file=.env.local --import tsx src/sync/servicio.ts",
+    "aprobar": "node --env-file=.env.local --import tsx src/sync/aprobar.ts"
   },
   "dependencies": {
+    "@azure/msal-node": "^5.2.4",
     "@neondatabase/serverless": "^1.1.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
@@ -27,6 +31,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "^5"
   }
 }

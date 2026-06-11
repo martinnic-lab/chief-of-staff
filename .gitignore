@@ -32,10 +32,15 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...pero la plantilla sin claves sí se comparte
+!.env.example
 
 # Archivo con claves en texto plano (NO commitear) y config local del agente
 Chief Of Staff Info Telegram.txt
 .claude/
+
+# Caché de sesión de Microsoft (contiene tokens — NO commitear)
+.msal-cache.json
 
 # vercel
 .vercel

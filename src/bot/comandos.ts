@@ -12,6 +12,7 @@
 //   bloqueada <parte del título>
 
 import { sql } from "../sync/neon";
+import { hayInterprete, interpretar, type Intencion } from "./interprete";
 
 export type Quien = {
   esMartin: boolean;
@@ -36,15 +37,15 @@ type FilaTarea = {
 };
 
 const AYUDA = [
-  "Esto es lo que entiendo:",
+  "Podés hablarme en lenguaje natural, por ejemplo:",
+  '• "Crea una tarea para Camila: revisar el desembolso del banco, urgente, para el viernes"',
+  '• "¿Qué tiene pendiente Steven?"',
+  '• "Ya terminé lo del predial"',
   "",
-  "• tareas — tus pendientes (o todos, si sos Martín)",
-  "• tareas camila — pendientes de una persona (solo Martín)",
+  "O usar comandos exactos:",
+  "• tareas — pendientes (tareas camila → los de ella)",
   "• nueva Pagar predial para camila alta vence 2026-06-20",
-  "  (la persona, la prioridad y la fecha son opcionales)",
-  "• completar predial — marca como completada",
-  "• progreso predial — la pone en progreso",
-  "• bloqueada predial — la marca bloqueada",
+  "• completar predial · progreso predial · bloqueada predial",
   "• ayuda — este mensaje",
 ].join("\n");
 
@@ -143,13 +144,34 @@ async function crear(quien: Quien, resto: string): Promise<string> {
 
   if (!texto) return "Me faltó el título de la tarea.";
 
+  return insertarTarea({
+    titulo: texto,
+    descripcion: null,
+    prioridad,
+    deadline: due,
+    assigneeId,
+    nombreAsignado,
+  });
+}
+
+// Inserción única que comparten el camino de comandos y el de lenguaje natural.
+async function insertarTarea(t: {
+  titulo: string;
+  descripcion: string | null;
+  prioridad: string;
+  deadline: string | null;
+  assigneeId: string | null;
+  nombreAsignado: string;
+}): Promise<string> {
   await sql.query(
-    `INSERT INTO tasks (title_raw, priority, status, due_date, assignee_id, last_movement_at)
-     VALUES ($1, $2, 'NUEVA', $3, $4, now())`,
-    [texto, prioridad, due, assigneeId]
+    `INSERT INTO tasks (title_raw, descripcion, priority, status, due_date, assignee_id, last_movement_at)
+     VALUES ($1, $2, $3, 'NUEVA', $4, $5, now())`,
+    [t.titulo, t.descripcion, t.prioridad, t.deadline, t.assigneeId]
   );
 
-  return `📋 Creada: "${texto}" → ${nombreAsignado} · ${prioridad}${due ? ` · vence ${due}` : ""}`;
+  return `📋 Creada: "${t.titulo}" → ${t.nombreAsignado} · ${t.prioridad}${
+    t.deadline ? ` · vence ${t.deadline}` : ""
+  }`;
 }
 
 async function cambiarEstado(
@@ -237,7 +259,80 @@ export async function procesar(
     return { respuesta: r.respuesta, avisoParaMartin: r.aviso };
   }
 
+  // — Lenguaje natural: Claude traduce el mensaje a una intención y el
+  //   mismo código de arriba la ejecuta. Si no hay API key, se omite. —
+  if (hayInterprete()) {
+    try {
+      const intencion = await interpretar(texto, quien.nombre);
+      if (intencion) return await ejecutarIntencion(quien, intencion);
+    } catch (e) {
+      console.error("[interprete] Error:", e instanceof Error ? e.message : e);
+    }
+  }
+
   return {
     respuesta: `No entendí "${texto}". Escribí "ayuda" para ver lo que sé hacer.`,
   };
+}
+
+// Ejecuta una intención ya estructurada. Validaciones de siempre: la persona
+// se busca en la base por nombre exacto; nada se inventa.
+async function ejecutarIntencion(
+  quien: Quien,
+  i: Intencion
+): Promise<{ respuesta: string; avisoParaMartin?: string }> {
+  switch (i.accion) {
+    case "ayuda":
+      return { respuesta: AYUDA };
+
+    case "aclarar":
+      return { respuesta: i.pregunta ?? "¿Me lo repetís con un poco más de detalle?" };
+
+    case "listar":
+      return { respuesta: await listar(quien, i.persona ?? i.fragmento ?? "") };
+
+    case "cambiar_estado": {
+      if (!i.fragmento || !i.nuevo_estado) {
+        return { respuesta: "¿A cuál tarea te referís? Decime parte del título." };
+      }
+      const r = await cambiarEstado(quien, i.fragmento, i.nuevo_estado);
+      return { respuesta: r.respuesta, avisoParaMartin: r.aviso };
+    }
+
+    case "crear": {
+      if (!i.titulo) {
+        return { respuesta: i.pregunta ?? "¿Cuál sería el título de la tarea?" };
+      }
+
+      // Resolver la persona contra la base (el esquema ya la limitó al equipo real).
+      let assigneeId: string | null = null;
+      let nombreAsignado = "sin asignar";
+      if (i.persona) {
+        const p = await buscarPersona(i.persona);
+        if (p) {
+          assigneeId = p.id;
+          nombreAsignado = p.full_name;
+        }
+      }
+      // Miembro del equipo sin destinatario: la tarea es para sí mismo.
+      if (!assigneeId && !quien.esMartin) {
+        assigneeId = quien.personaId;
+        nombreAsignado = quien.nombre;
+      }
+
+      const respuesta = await insertarTarea({
+        titulo: i.titulo,
+        descripcion: i.descripcion,
+        prioridad: i.prioridad ?? "MEDIA",
+        deadline: i.deadline,
+        assigneeId,
+        nombreAsignado,
+      });
+      return {
+        respuesta:
+          respuesta +
+          (assigneeId ? "" : "\n(Quedó sin asignar — decime a quién se la paso.)"),
+      };
+    }
+  }
 }

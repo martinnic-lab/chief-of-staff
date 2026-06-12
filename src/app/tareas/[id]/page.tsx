@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { eq } from "drizzle-orm";
-import { db } from "@/db";
-import { tareas } from "@/db/schema";
+import { obtenerTarea, esUuid } from "@/db/tareas";
 import { PrioridadChip, EstadoChip, formatearFecha } from "@/components/ui";
 import DetalleAcciones from "./DetalleAcciones";
 
@@ -14,10 +12,9 @@ export default async function DetalleTareaPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const idNum = Number(id);
-  if (!Number.isInteger(idNum)) notFound();
+  if (!esUuid(id)) notFound();
 
-  const [tarea] = await db.select().from(tareas).where(eq(tareas.id, idNum));
+  const tarea = await obtenerTarea(id);
   if (!tarea) notFound();
 
   const notas = tarea.notas
@@ -55,7 +52,9 @@ export default async function DetalleTareaPage({
             <dt className="text-[11px] font-extrabold uppercase tracking-wide text-gray-400">
               Asignada a
             </dt>
-            <dd className="mt-0.5 font-semibold">{tarea.asignado_a}</dd>
+            <dd className="mt-0.5 font-semibold">
+              {tarea.asignado ?? "Sin asignar"}
+            </dd>
           </div>
           <div>
             <dt className="text-[11px] font-extrabold uppercase tracking-wide text-gray-400">
@@ -70,7 +69,7 @@ export default async function DetalleTareaPage({
               Creada
             </dt>
             <dd className="mt-0.5 font-semibold">
-              {new Date(tarea.creada_en).toLocaleString("es-CO")}
+              {new Date(tarea.creada).toLocaleString("es-CO")}
             </dd>
           </div>
           <div>
@@ -78,7 +77,9 @@ export default async function DetalleTareaPage({
               Último movimiento
             </dt>
             <dd className="mt-0.5 font-semibold">
-              {new Date(tarea.actualizada_en).toLocaleString("es-CO")}
+              {tarea.movimiento
+                ? new Date(tarea.movimiento).toLocaleString("es-CO")
+                : "—"}
             </dd>
           </div>
         </dl>

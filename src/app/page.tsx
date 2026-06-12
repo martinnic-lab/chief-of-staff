@@ -1,7 +1,5 @@
 import Link from "next/link";
-import { db } from "@/db";
-import { tareas, TEAM } from "@/db/schema";
-import type { Tarea } from "@/db/schema";
+import { listarTareas, listarPersonas, type TareaVista } from "@/db/tareas";
 import {
   PrioridadChip,
   EstadoChip,
@@ -18,7 +16,7 @@ async function accionRevisarAtrasos() {
   await revisarAtrasos();
 }
 
-function Card({ t }: { t: Tarea }) {
+function Card({ t }: { t: TareaVista }) {
   return (
     <Link
       href={`/tareas/${t.id}`}
@@ -38,8 +36,42 @@ function Card({ t }: { t: Tarea }) {
   );
 }
 
+function Columna({
+  titulo,
+  tareas,
+}: {
+  titulo: string;
+  tareas: TareaVista[];
+}) {
+  return (
+    <div className="flex flex-col rounded-2xl border border-[#ececf3] bg-[#f9fafb] p-3">
+      <div className="mb-3 flex items-center justify-between px-1">
+        <h2 className="text-[13px] font-extrabold uppercase tracking-wide text-gray-600">
+          {titulo}
+        </h2>
+        <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-gray-500">
+          {tareas.length}
+        </span>
+      </div>
+      <div className="flex flex-col gap-2.5">
+        {tareas.length === 0 ? (
+          <p className="px-1 py-6 text-center text-xs text-gray-400">
+            Sin tareas
+          </p>
+        ) : (
+          tareas.map((t) => <Card key={t.id} t={t} />)
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default async function Home() {
-  const todas = await db.select().from(tareas);
+  const [todas, personas] = await Promise.all([
+    listarTareas(),
+    listarPersonas(),
+  ]);
+  const sinAsignar = ordenarTareas(todas.filter((t) => !t.asignado_id));
 
   return (
     <div>
@@ -67,35 +99,16 @@ export default async function Home() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {TEAM.map((persona) => {
-          const deLaPersona = ordenarTareas(
-            todas.filter((t) => t.asignado_a === persona)
-          );
-          return (
-            <div
-              key={persona}
-              className="flex flex-col rounded-2xl border border-[#ececf3] bg-[#f9fafb] p-3"
-            >
-              <div className="mb-3 flex items-center justify-between px-1">
-                <h2 className="text-[13px] font-extrabold uppercase tracking-wide text-gray-600">
-                  {persona}
-                </h2>
-                <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-gray-500">
-                  {deLaPersona.length}
-                </span>
-              </div>
-              <div className="flex flex-col gap-2.5">
-                {deLaPersona.length === 0 ? (
-                  <p className="px-1 py-6 text-center text-xs text-gray-400">
-                    Sin tareas
-                  </p>
-                ) : (
-                  deLaPersona.map((t) => <Card key={t.id} t={t} />)
-                )}
-              </div>
-            </div>
-          );
-        })}
+        {personas.map((p) => (
+          <Columna
+            key={p.id}
+            titulo={p.nombre}
+            tareas={ordenarTareas(todas.filter((t) => t.asignado_id === p.id))}
+          />
+        ))}
+        {sinAsignar.length > 0 && (
+          <Columna titulo="Sin asignar" tareas={sinAsignar} />
+        )}
       </div>
     </div>
   );

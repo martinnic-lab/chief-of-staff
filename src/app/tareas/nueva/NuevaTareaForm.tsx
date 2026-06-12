@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { TEAM } from "@/db/schema";
 import { crearTarea } from "@/app/actions";
+
+type Persona = { id: string; nombre: string };
 
 function BotonCrear() {
   const { pending } = useFormStatus();
@@ -18,7 +19,7 @@ function BotonCrear() {
   );
 }
 
-export default function NuevaTareaForm() {
+export default function NuevaTareaForm({ personas }: { personas: Persona[] }) {
   const [titulo, setTitulo] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [asignado, setAsignado] = useState("");
@@ -96,7 +97,10 @@ export default function NuevaTareaForm() {
             {sugerencia.persona && (
               <button
                 type="button"
-                onClick={() => setAsignado(sugerencia.persona!)}
+                onClick={() => {
+                  const p = personas.find((x) => x.nombre === sugerencia.persona);
+                  if (p) setAsignado(p.id);
+                }}
                 className="mt-2 rounded-lg bg-[#5e55fe] px-3 py-1.5 text-xs font-bold text-white hover:brightness-105"
               >
                 Usar a {sugerencia.persona}
@@ -113,7 +117,7 @@ export default function NuevaTareaForm() {
       <div>
         <label className={labelCls}>Asignar a *</label>
         <select
-          name="asignado_a"
+          name="asignado_id"
           required
           value={asignado}
           onChange={(e) => setAsignado(e.target.value)}
@@ -122,9 +126,9 @@ export default function NuevaTareaForm() {
           <option value="" disabled>
             Elegí una persona…
           </option>
-          {TEAM.map((p) => (
-            <option key={p} value={p}>
-              {p}
+          {personas.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.nombre}
             </option>
           ))}
         </select>

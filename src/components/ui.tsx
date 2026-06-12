@@ -1,4 +1,4 @@
-import type { Tarea } from "@/db/schema";
+// Piezas visuales compartidas del tablero.
 
 // Paleta tomada del HTML original.
 export const COLORS = {
@@ -10,7 +10,7 @@ export const COLORS = {
   gris: "#6b7280",
 };
 
-export function PrioridadChip({ prioridad }: { prioridad: Tarea["prioridad"] }) {
+export function PrioridadChip({ prioridad }: { prioridad: string }) {
   const estilos: Record<string, string> = {
     ALTA: "bg-red-100 text-red-700",
     MEDIA: "bg-amber-100 text-amber-700",
@@ -18,14 +18,16 @@ export function PrioridadChip({ prioridad }: { prioridad: Tarea["prioridad"] }) 
   };
   return (
     <span
-      className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold ${estilos[prioridad]}`}
+      className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+        estilos[prioridad] ?? "bg-gray-100 text-gray-600"
+      }`}
     >
       {prioridad}
     </span>
   );
 }
 
-export function EstadoChip({ estado }: { estado: Tarea["estado"] }) {
+export function EstadoChip({ estado }: { estado: string }) {
   const estilos: Record<string, string> = {
     NUEVA: "bg-gray-100 text-gray-600",
     EN_PROGRESO: "bg-blue-100 text-blue-700",
@@ -40,9 +42,11 @@ export function EstadoChip({ estado }: { estado: Tarea["estado"] }) {
   };
   return (
     <span
-      className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold ${estilos[estado]}`}
+      className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+        estilos[estado] ?? "bg-gray-100 text-gray-600"
+      }`}
     >
-      {etiqueta[estado]}
+      {etiqueta[estado] ?? estado}
     </span>
   );
 }
@@ -54,9 +58,12 @@ export const RANGO_PRIORIDAD: Record<string, number> = {
   BAJA: 2,
 };
 
-export function ordenarTareas(lista: Tarea[]): Tarea[] {
+export function ordenarTareas<
+  T extends { prioridad: string; deadline: string | null }
+>(lista: T[]): T[] {
   return [...lista].sort((a, b) => {
-    const p = RANGO_PRIORIDAD[a.prioridad] - RANGO_PRIORIDAD[b.prioridad];
+    const p =
+      (RANGO_PRIORIDAD[a.prioridad] ?? 1) - (RANGO_PRIORIDAD[b.prioridad] ?? 1);
     if (p !== 0) return p;
     // Sin deadline va al final.
     if (a.deadline && b.deadline) return a.deadline.localeCompare(b.deadline);

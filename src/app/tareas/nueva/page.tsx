@@ -1,7 +1,12 @@
 import Link from "next/link";
+import { listarPersonas } from "@/db/tareas";
 import NuevaTareaForm from "./NuevaTareaForm";
 
-export default function NuevaTareaPage() {
+export const dynamic = "force-dynamic";
+
+export default async function NuevaTareaPage() {
+  const personas = await listarPersonas();
+
   return (
     <div className="mx-auto max-w-2xl">
       <Link
@@ -14,7 +19,7 @@ export default function NuevaTareaPage() {
         Nueva tarea
       </h1>
       <div className="rounded-2xl border border-[#eef0f7] bg-white p-6 shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
-        <NuevaTareaForm />
+        <NuevaTareaForm personas={personas} />
       </div>
     </div>
   );

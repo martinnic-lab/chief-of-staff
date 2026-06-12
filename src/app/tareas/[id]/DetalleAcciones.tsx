@@ -29,8 +29,8 @@ export default function DetalleAcciones({
   id,
   estadoActual,
 }: {
-  id: number;
-  estadoActual: Estado;
+  id: string;
+  estadoActual: string;
 }) {
   const [pendiente, startTransition] = useTransition();
   const [nota, setNota] = useState("");
